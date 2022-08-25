@@ -29,7 +29,7 @@ boolean shouldRun=true,working=false,endReaddy=false;
 				Main.completed++;//increase the number of of coppies completed
 				double precent=((int)((Main.completed*0.1/Main.total)*10000))/10.0;//calculate the completion percent 
 				if(Main.logLevel>=2)
-				System.out.println("(%"+precent+") "+Main.source+"/"+toCopy.get(0)+" >>>> "+Main.destination+"/"+toCopy.get(0));
+				//System.out.println("(%"+precent+") "+Main.source+"/"+toCopy.get(0)+" >>>> "+Main.destination+"/"+toCopy.get(0));
 				toCopy.remove(0);
 				
 				
@@ -44,7 +44,8 @@ boolean shouldRun=true,working=false,endReaddy=false;
 	}
 	private void copy(int times,String newDir[],String destDir) {
 		if(times>=50) {
-			System.out.println("faied to copy file: "+toCopy.get(0));
+			//System.out.println("faied to copy file: "+toCopy.get(0));
+			Main.errorMessages.add("faied to copy file: "+toCopy.get(0));
 			return;
 		}
 		try {

@@ -9,7 +9,7 @@ import java.util.ArrayList;
  *
  */
 public class Main {
-	static ArrayList<String> fileIndex=new ArrayList<>(),stackTraces=new ArrayList<>();
+	static ArrayList<String> fileIndex=new ArrayList<>(),stackTraces=new ArrayList<>(),errorMessages=new ArrayList<>();
 	static String source,destination;
 	static int completed=0,total=0,numOfThreads=4,batchSize=10,logLevel=2,errors=0;
 	static ArrayList<CopyThread> threads=new ArrayList<>();
@@ -62,6 +62,7 @@ public class Main {
 					threads.get(i).working=true;
 				}
 			}
+			printStatus();
 		}
 		for(int i=0;i<threads.size();i++) {//tell all threads that there will be no more work once they finish
 			threads.get(i).endReaddy=true;
@@ -69,7 +70,7 @@ public class Main {
 		if(logLevel>=1)
 			System.out.println("file assignment finished");
 		while(threadsRunning()) {//wait for all the threads to finish copying files
-			
+			printStatus();
 		}
 		long programEndTime=System.nanoTime();//note the time at witch the copying finished
 		long totalTime=(programEndTime-programStart)/1000000,indexTime=(copyStart-programStart)/1000000,copyTime=(programEndTime-copyStart)/1000000;//calculates the time things took
@@ -88,6 +89,21 @@ public class Main {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	private static void printStatus() {
+		while(errorMessages.size()>0){
+			System.out.print(Cursor.eraseLine());
+			System.out.println(errorMessages.get(0));
+			errorMessages.remove(0);
+		}
+		for(int i=0;i<threads.size();i++) {
+			System.out.print(Cursor.eraseLine());
+			System.out.println(source+"/"+threads.get(i).toCopy.get(0)+" >>>> "+destination+"/"+threads.get(i).toCopy.get(0));
+		}
+		double precent=((int)((completed*0.1/total)*10000))/10.0;
+		System.out.print(Cursor.eraseLine());
+		System.out.print("(%"+precent+") completed"+Cursor.coursorUp(threads.size()+1)+"\r");
 	}
 	
 	/**Recursively scan folders for files to copy
