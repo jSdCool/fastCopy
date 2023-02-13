@@ -13,11 +13,12 @@ public class Main {
 	static String source,destination;
 	static int completed=0,total=0,numOfThreads=4,batchSize=10,logLevel=2,errors=0;
 	static ArrayList<CopyThread> threads=new ArrayList<>();
+	static boolean printMode80=false;
 	public static void main(String[] args) {
 		//deal with the args
 		if(args.length<2) {//if you have no provided file paths
 			if(args.length==1&&args[0].equals("help")) {//if you ran the help commmand
-				System.out.println("fastCopy.jar source destination [OPTIONS]\n\nsource: the file path of the folder that is to be coppied\ndestination: the file path where the folder is to be coppied\n\nOPTIONS\nb= set the copy batch size (default = 10)\nt= set the number of threads to use (default = 4)\nl= set the log level between 0 and 3 (default = 2)");
+				System.out.println("fastCopy.jar source destination [OPTIONS]\n\nsource: the file path of the folder that is to be coppied\ndestination: the file path where the folder is to be coppied\n\nOPTIONS\nb= set the copy batch size (default = 10)\nt= set the number of threads to use (default = 4)\nl= set the log level between 0 and 3 (default = 2)\npm= set the print mode. options: 80 (default = unknown)");
 				return;
 			}
 			System.out.println("invalid parameters. use fastCopy.jar help for more info");
@@ -36,15 +37,22 @@ public class Main {
 			if(args[i].startsWith("l=")) {//log level
 				logLevel=Integer.parseInt(args[i].substring(2,args[i].length()));
 			}
+			if(args[i].startsWith("pm=")) {
+				printMode80=args[i].substring(2,args[i].length()).equals("80");
+			}
+		}
+		printBuffer=new String[numOfThreads];
+		for(int i=0;i<numOfThreads;i++) {
+			printBuffer[i]="";
 		}
 		
 		long programStart = System.nanoTime();//note the program start time 
 		if(logLevel>=1)
-		System.out.println("scanning for files");
+			System.out.println("scanning for files\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 		scanForFiles(source,"");//Discover all the file that need to be copied
 		total=fileIndex.size();//note how many file there are
 		if(logLevel>=1)
-		System.out.println("found "+total+" files");
+			System.out.println("found "+total+" files");
 		for(int i=0;i<numOfThreads;i++) {//create all the requested threads
 			threads.add(new CopyThread());
 			threads.get(i).start();
@@ -55,26 +63,26 @@ public class Main {
 				if(!threads.get(i).isAlive()) {//restart the thread if it died
 					threads.set(i, new CopyThread());
 					threads.get(i).start();
-					System.out.println("repalced thread "+i);
+					//System.out.println("repalced thread "+i);
 				}
 				if(!threads.get(i).working) {//if the thread needs more work to do then give it more work
 					threads.get(i).toCopy=createNextJob();
 					threads.get(i).working=true;
 				}
 			}
-			printStatus();
+			if(logLevel>=2)
+				printStatus();//print out the current progess status
 		}
 		for(int i=0;i<threads.size();i++) {//tell all threads that there will be no more work once they finish
 			threads.get(i).endReaddy=true;
 		}
-		if(logLevel>=1)
-			System.out.println("file assignment finished");
 		while(threadsRunning()) {//wait for all the threads to finish copying files
-			printStatus();
+			if(logLevel>=2)
+				printStatus();
 		}
 		long programEndTime=System.nanoTime();//note the time at witch the copying finished
 		long totalTime=(programEndTime-programStart)/1000000,indexTime=(copyStart-programStart)/1000000,copyTime=(programEndTime-copyStart)/1000000;//calculates the time things took
-		System.out.println("coppied "+total+" files with "+errors+" errors\ntotal time taken: "+totalTime+"ms index time: "+indexTime+"ms copy time: "+copyTime+"ms");
+		System.out.println("\n\ncoppied "+total+" files with "+errors+" errors\ntotal time taken: "+totalTime+"ms index time: "+indexTime+"ms copy time: "+copyTime+"ms");
 		String totalError="";
 		//save all error that were encountered to a file
 		for(int i=0;i<stackTraces.size();i++) {
@@ -92,18 +100,25 @@ public class Main {
 	}
 
 	private static void printStatus() {
-		while(errorMessages.size()>0){
+		//System.out.println(Cursor.eraseLine()+"======================================");
+		/*while(errorMessages.size()>0){
 			System.out.print(Cursor.eraseLine());
 			System.out.println(errorMessages.get(0));
 			errorMessages.remove(0);
-		}
+		}*/
 		for(int i=0;i<threads.size();i++) {
 			System.out.print(Cursor.eraseLine());
-			System.out.println(source+"/"+threads.get(i).toCopy.get(0)+" >>>> "+destination+"/"+threads.get(i).toCopy.get(0));
+			if(threads.get(i).toCopy.size()!=0) {
+				try {
+					formatPrint(threads.get(i).toCopy.get(0));
+				}catch(IndexOutOfBoundsException e) {
+					formatPrint("idle");
+				}
+			}else {
+				formatPrint("done");
+			}
 		}
-		double precent=((int)((completed*0.1/total)*10000))/10.0;
-		System.out.print(Cursor.eraseLine());
-		System.out.print("(%"+precent+") completed"+Cursor.coursorUp(threads.size()+1)+"\r");
+		formatedPrintFlush(true);
 	}
 	
 	/**Recursively scan folders for files to copy
@@ -126,7 +141,8 @@ public class Main {
 					fileIndex.add(subPath+"/"+files[i]);
 				}
 				if(logLevel>=3)
-				System.out.println(fileIndex.get(fileIndex.size()-1));
+					formatPrint(fileIndex.get(fileIndex.size()-1));
+					formatedPrintFlush(false);
 			}
 		}
 	
@@ -156,6 +172,56 @@ public class Main {
 				return true;
 		}
 		return false;
+	}
+	
+	static String[] printBuffer={"","","",""};
+	static int prevNumOfPrintLines=0;
+	static void formatPrint(String s) {			
+			//shift the print buffer
+			for(int i=printBuffer.length-1;i>0;i--) {
+				printBuffer[i]=printBuffer[i-1];
+			}
+			printBuffer[0]=s;
+		
+	}
+	static void formatedPrintFlush(boolean dispPercent) {
+		
+		if(printMode80) {//figure out how many line will be printed
+			int numLines=0;
+			for(int i=0;i<printBuffer.length;i++) {
+				numLines+=printBuffer[i].length()/80+1;	
+			}
+			//erase previous lines that may have text on them and move to the new position
+			if(prevNumOfPrintLines>numLines) {
+				System.out.print(Cursor.coursorUp(prevNumOfPrintLines+((dispPercent)?1:0)));
+				for(int i=0;i<prevNumOfPrintLines-numLines;i++) {
+					System.out.print(Cursor.eraseLine()+Cursor.coursordown(1)+"\r");
+				}
+			}else {
+				System.out.print(Cursor.coursorUp(numLines+((dispPercent)?1:0)));
+			}
+			//print the info in the buffer
+			for(int i=printBuffer.length-1;i>=0;i--) {
+				System.out.println(Cursor.eraseLine()+printBuffer[i]);
+			}
+			prevNumOfPrintLines=numLines;
+		}else {
+			System.out.println(Cursor.eraseLine()+printBuffer[0]);
+		}
+		
+		//print the percentage complete with a loading boar and the number of errors
+		if(dispPercent) {
+			double precent=((int)((completed*0.1/total)*10000))/10.0;
+			System.out.print(precent+"% [");
+			for(int i=0;i<50;i++) {
+				if(((i+1)*1.0/50)*100<=precent) {
+					System.out.print("=");
+				}else {
+					System.out.print(" ");
+				}
+			}
+			System.out.print("] "+errorMessages.size()+" errors\r");
+		}
 	}
 
 }
