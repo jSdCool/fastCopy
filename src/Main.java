@@ -38,21 +38,21 @@ public class Main {
 				logLevel=Integer.parseInt(args[i].substring(2,args[i].length()));
 			}
 			if(args[i].startsWith("pm=")) {
-				printMode80=args[i].substring(2,args[i].length()).equals("80");
+				printMode80=args[i].substring(3,args[i].length()).equals("80");
 			}
 		}
 		printBuffer=new String[numOfThreads];
 		for(int i=0;i<numOfThreads;i++) {
 			printBuffer[i]="";
 		}
-		
+
 		long programStart = System.nanoTime();//note the program start time 
 		if(logLevel>=1)
-			System.out.println("scanning for files\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			System.out.println("scanning for files\n\n\n\n\n\n\n\n\n\n\n\n\n");
 		scanForFiles(source,"");//Discover all the file that need to be copied
 		total=fileIndex.size();//note how many file there are
 		if(logLevel>=1)
-			System.out.println("found "+total+" files");
+			System.out.println("found "+total+" files\n\n\n\n\n\n\n\n\n\n\n\n");
 		for(int i=0;i<numOfThreads;i++) {//create all the requested threads
 			threads.add(new CopyThread());
 			threads.get(i).start();
@@ -72,6 +72,12 @@ public class Main {
 			}
 			if(logLevel>=2)
 				printStatus();//print out the current progess status
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		for(int i=0;i<threads.size();i++) {//tell all threads that there will be no more work once they finish
 			threads.get(i).endReaddy=true;
@@ -85,17 +91,19 @@ public class Main {
 		System.out.println("\n\ncoppied "+total+" files with "+errors+" errors\ntotal time taken: "+totalTime+"ms index time: "+indexTime+"ms copy time: "+copyTime+"ms");
 		String totalError="";
 		//save all error that were encountered to a file
-		for(int i=0;i<stackTraces.size();i++) {
-			totalError+=stackTraces.get(i)+"\n\n";
-		}
-		FileWriter wr;
-		try {
-			wr = new FileWriter("error.txt");
-			wr.write(totalError);
-			wr.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if(stackTraces.size()>0) {
+			for(int i=0;i<stackTraces.size();i++) {
+				totalError+=stackTraces.get(i)+"\n\n";
+			}
+			FileWriter wr;
+			try {
+				wr = new FileWriter("error.txt");
+				wr.write(totalError);
+				wr.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -120,7 +128,7 @@ public class Main {
 		}
 		formatedPrintFlush(true);
 	}
-	
+
 	/**Recursively scan folders for files to copy
 	 * 
 	 * @param parentPath the root path of the folder that is being copied 
@@ -142,12 +150,12 @@ public class Main {
 				}
 				if(logLevel>=3)
 					formatPrint(fileIndex.get(fileIndex.size()-1));
-					formatedPrintFlush(false);
+				formatedPrintFlush(false);
 			}
 		}
-	
+
 	}
-	
+
 	/**gets a list of files that need to be copied to send to a thread
 	 * 
 	 * @return an array list of file paths that need to be copied
@@ -157,11 +165,11 @@ public class Main {
 		for(int i=0;i<batchSize&&fileIndex.size()>0;i++) {//use the batch size to determine the number of items to send to each thread
 			batch.add(fileIndex.remove(0));
 		}
-		
+
 		return batch;
-	
+
 	}
-	
+
 	/**
 	 * 
 	 * @return weather any thread is sill running 
@@ -173,19 +181,19 @@ public class Main {
 		}
 		return false;
 	}
-	
+
 	static String[] printBuffer={"","","",""};
 	static int prevNumOfPrintLines=0;
 	static void formatPrint(String s) {			
-			//shift the print buffer
-			for(int i=printBuffer.length-1;i>0;i--) {
-				printBuffer[i]=printBuffer[i-1];
-			}
-			printBuffer[0]=s;
-		
+		//shift the print buffer
+		for(int i=printBuffer.length-1;i>0;i--) {
+			printBuffer[i]=printBuffer[i-1];
+		}
+		printBuffer[0]=s;
+
 	}
 	static void formatedPrintFlush(boolean dispPercent) {
-		
+
 		if(printMode80) {//figure out how many line will be printed
 			int numLines=0;
 			for(int i=0;i<printBuffer.length;i++) {
@@ -198,17 +206,28 @@ public class Main {
 					System.out.print(Cursor.eraseLine()+Cursor.coursordown(1)+"\r");
 				}
 			}else {
-				System.out.print(Cursor.coursorUp(numLines+((dispPercent)?1:0)));
+				System.out.print(Cursor.coursorUp(numLines));
 			}
 			//print the info in the buffer
 			for(int i=printBuffer.length-1;i>=0;i--) {
-				System.out.println(Cursor.eraseLine()+printBuffer[i]);
+				if(printBuffer[i].length()>80) {
+					int leftIndex=0;
+					while(leftIndex<printBuffer[i].length()) {
+						if(leftIndex+80>=printBuffer[i].length()) {
+							System.out.println(printBuffer[i].substring(leftIndex));
+						}else {
+							System.out.println(printBuffer[i].substring(leftIndex,leftIndex+80));
+						}
+						leftIndex+=80;
+					}
+				}else
+					System.out.println(Cursor.eraseLine()+printBuffer[i]);
 			}
 			prevNumOfPrintLines=numLines;
 		}else {
 			System.out.println(Cursor.eraseLine()+printBuffer[0]);
 		}
-		
+
 		//print the percentage complete with a loading boar and the number of errors
 		if(dispPercent) {
 			double precent=((int)((completed*0.1/total)*10000))/10.0;
